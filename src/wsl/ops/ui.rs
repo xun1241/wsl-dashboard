@@ -26,13 +26,57 @@ pub async fn open_distro_folder(_executor: &WslCommandExecutor, distro_name: &st
     }).await.unwrap()
 }
 
+fn find_antigravity_executable() -> String {
+    // 1. Check PATH
+    if let Some(paths) = std::env::var_os("PATH") {
+        for dir in std::env::split_paths(&paths) {
+            for name in &["antigravity-ide.cmd", "antigravity-ide.exe", "antigravity.cmd", "antigravity.exe"] {
+                let p = dir.join(name);
+                if p.is_file() {
+                    return p.to_string_lossy().to_string();
+                }
+            }
+        }
+    }
+
+    // 2. Check standard installation directories in LOCALAPPDATA / ProgramFiles
+    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        let p1 = std::path::PathBuf::from(&local_app_data).join("Programs").join("Antigravity IDE").join("bin").join("antigravity-ide.cmd");
+        if p1.is_file() {
+            return p1.to_string_lossy().to_string();
+        }
+        let p2 = std::path::PathBuf::from(&local_app_data).join("Programs").join("Antigravity IDE").join("bin").join("antigravity-ide.exe");
+        if p2.is_file() {
+            return p2.to_string_lossy().to_string();
+        }
+        let p3 = std::path::PathBuf::from(&local_app_data).join("Programs").join("antigravity").join("bin").join("antigravity.cmd");
+        if p3.is_file() {
+            return p3.to_string_lossy().to_string();
+        }
+    }
+
+    if let Ok(program_files) = std::env::var("ProgramFiles") {
+        let p1 = std::path::PathBuf::from(&program_files).join("Antigravity IDE").join("bin").join("antigravity-ide.cmd");
+        if p1.is_file() {
+            return p1.to_string_lossy().to_string();
+        }
+        let p2 = std::path::PathBuf::from(&program_files).join("Antigravity IDE").join("bin").join("antigravity-ide.exe");
+        if p2.is_file() {
+            return p2.to_string_lossy().to_string();
+        }
+    }
+
+    "antigravity-ide".to_string()
+}
+
 pub async fn open_distro_vscode(_executor: &WslCommandExecutor, distro_name: &str, working_dir: &str) -> WslCommandResult<String> {
     let remote_arg = format!("wsl+{}", distro_name);
     let dir = working_dir.to_string();
+    let exe_path = find_antigravity_executable();
     task::spawn_blocking(move || {
         let mut command = std::process::Command::new("powershell");
-        // Using -Command with formatted string ensures it's executed correctly in PS
-        let ps_command = format!("antigravity --remote {} '{}'", remote_arg, dir);
+        // Using call operator '&' ensures paths with spaces execute correctly in PS
+        let ps_command = format!("& '{}' --remote {} '{}'", exe_path, remote_arg, dir);
         command.args(&["-NoProfile", "-Command", &ps_command]);
         
         #[cfg(windows)]
