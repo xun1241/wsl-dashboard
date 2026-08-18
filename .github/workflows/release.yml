@@ -34,6 +34,9 @@ jobs:
         with:
           toolchain: stable-x86_64-pc-windows-msvc
 
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+
       - name: Install Inno Setup
         shell: pwsh
         run: |
