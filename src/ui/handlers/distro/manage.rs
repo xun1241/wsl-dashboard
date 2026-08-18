@@ -149,12 +149,12 @@ pub fn setup(app: &AppWindow, app_handle: slint::Weak<AppWindow>, app_state: Arc
         });
     }
 
-    // VS Code
+    // Antigravity IDE
     {
         let ah_outer = app_handle.clone();
         let as_outer = app_state.clone();
         app.on_vscode_distro(move |name| {
-            info!("Operation: Try open VS Code - {}", name);
+            info!("Operation: Try open Antigravity IDE - {}", name);
             let ah = ah_outer.clone();
             let as_ptr = as_outer.clone();
             let _ = slint::spawn_local(async move {
@@ -174,57 +174,26 @@ pub fn setup(app: &AppWindow, app_handle: slint::Weak<AppWindow>, app_state: Arc
 
                 let ah_timer = ah.clone();
                 let executor = manager.executor().clone();
-                let check_result = crate::wsl::ops::ui::check_vscode_extension(&executor).await;
-                let is_valid_version = check_result.success && check_result.output.contains("ms-vscode-remote.remote-wsl");
 
-                if is_valid_version {
-                    if let Some(app) = ah.upgrade() {
-                        app.set_show_vscode_startup(true);
-                    }
-
-                    let working_dir = {
-                        let state = as_ptr.lock().await;
-                        state.config_manager.get_instance_config(&name).vscode_dir
-                    };
-                    
-                    let _ = executor.open_distro_vscode(&name, &working_dir).await;
-                    refresh_distros_ui(ah, as_ptr).await;
-
-                    slint::Timer::single_shot(std::time::Duration::from_secs(6), move || {
-                        if let Some(app) = ah_timer.upgrade() {
-                            if app.get_show_vscode_startup() {
-                                app.set_show_vscode_startup(false);
-                            }
-                        }
-                    });
-                } else {
-                    let mut ext_info = {
-                        let state = as_ptr.lock().await;
-                        state.vscode_extension.clone()
-                    };
-
-                    if ext_info.is_none() {
-                        instance::refresh_vscode_extension(as_ptr.clone()).await;
-                        ext_info = {
-                            let state = as_ptr.lock().await;
-                            state.vscode_extension.clone()
-                        };
-                    }
-
-                    let (ext_name, ext_url) = if let Some(info) = ext_info {
-                        (info.name, info.url)
-                    } else {
-                        let default = crate::app::VSCodeExtensionData::default();
-                        (default.name, default.url)
-                    };
-
-                    if let Some(app) = ah.upgrade() {
-                        app.set_current_message(i18n::t("dialog.vscode_extension_required").into());
-                        app.set_current_message_link(ext_name.into());
-                        app.set_current_message_url(ext_url.into());
-                        app.set_show_message_dialog(true);
-                    }
+                if let Some(app) = ah.upgrade() {
+                    app.set_show_vscode_startup(true);
                 }
+
+                let working_dir = {
+                    let state = as_ptr.lock().await;
+                    state.config_manager.get_instance_config(&name).vscode_dir
+                };
+                
+                let _ = executor.open_distro_vscode(&name, &working_dir).await;
+                refresh_distros_ui(ah, as_ptr).await;
+
+                slint::Timer::single_shot(std::time::Duration::from_secs(6), move || {
+                    if let Some(app) = ah_timer.upgrade() {
+                        if app.get_show_vscode_startup() {
+                            app.set_show_vscode_startup(false);
+                        }
+                    }
+                });
             });
         });
     }

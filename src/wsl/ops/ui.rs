@@ -32,7 +32,7 @@ pub async fn open_distro_vscode(_executor: &WslCommandExecutor, distro_name: &st
     task::spawn_blocking(move || {
         let mut command = std::process::Command::new("powershell");
         // Using -Command with formatted string ensures it's executed correctly in PS
-        let ps_command = format!("code --remote {} '{}'", remote_arg, dir);
+        let ps_command = format!("antigravity --remote {} '{}'", remote_arg, dir);
         command.args(&["-NoProfile", "-Command", &ps_command]);
         
         #[cfg(windows)]
