@@ -1,4 +1,4 @@
-name: GitHub Release
+name: 1. GitHub Release
 run-name: GitHub:${{ github.ref_name }}
 
 permissions:
@@ -33,6 +33,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable-x86_64-pc-windows-msvc
+          targets: x86_64-pc-windows-msvc, aarch64-pc-windows-msvc
 
       - name: Rust Cache
         uses: swatinem/rust-cache@v2
@@ -54,6 +55,12 @@ jobs:
       - name: Build Release
         run: cargo build --release
 
+      - name: Build Release (arm64)
+        shell: pwsh
+        run: |
+          rustup target add aarch64-pc-windows-msvc
+          .\build\portable\build.ps1 -Arch arm64
+
       - name: Get Version
         id: get_version
         shell: pwsh
@@ -70,7 +77,8 @@ jobs:
       - name: Prepare Assets
         shell: pwsh
         run: |
-          .\build\actions\github_release_prepare.ps1 -Version "${{ steps.get_version.outputs.VERSION }}"
+          .\build\actions\github_release_prepare.ps1 -Version "${{ steps.get_version.outputs.VERSION }}" -Arch x64
+          .\build\actions\github_release_prepare.ps1 -Version "${{ steps.get_version.outputs.VERSION }}" -Arch arm64
 
       - name: Release
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
@@ -79,7 +87,8 @@ jobs:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', steps.get_version.outputs.VERSION) }}
           files: |
             target/release/WSLDashboard.${{ steps.get_version.outputs.VERSION }}.Portable.x64.zip
-            build/releases/WSLDashboard.${{ steps.get_version.outputs.VERSION }}.Setup.x64.zip
             build/releases/WSLDashboard.${{ steps.get_version.outputs.VERSION }}.Setup.x64.exe
+            target/aarch64-pc-windows-msvc/release/WSLDashboard.${{ steps.get_version.outputs.VERSION }}.Portable.arm64.zip
+            build/releases/WSLDashboard.${{ steps.get_version.outputs.VERSION }}.Setup.arm64.exe
           generate_release_notes: true
 
